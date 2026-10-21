@@ -1,0 +1,39 @@
+name: Universal Sync Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+env:
+  UPSTREAM_REPO: 'guohuiyuan/go-music-dl' # 仅需填写上游仓库地址
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect branch and sync
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 自动获取本地当前检出的分支名（不管是 master 还是 main）
+          DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "当前仓库默认分支为: $DEFAULT_BRANCH"
+
+          # 添加上游并拉取对应分支
+          git remote add upstream "https://github.com/${{ env.UPSTREAM_REPO }}.git"
+          git fetch upstream "$DEFAULT_BRANCH"
+
+          # 合并并推送
+          git checkout "$DEFAULT_BRANCH"
+          git merge "upstream/$DEFAULT_BRANCH" --no-edit
+          git push origin "$DEFAULT_BRANCH"
